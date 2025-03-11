@@ -1,7 +1,8 @@
 import socket
 import os
-from dotenv import load_dotenv
 import threading
+import curses
+from dotenv import load_dotenv
 
 # Cargar variables de entorno
 load_dotenv()
@@ -9,23 +10,53 @@ load_dotenv()
 HOST = os.getenv('HOST', '127.0.0.1')
 PORT = int(os.getenv('PORT', 12345))
 
-def receive_messages(client):
-    """Recibe y muestra mensajes del servidor"""
+# Lista de mensajes para la UI
+messages = []
+
+def receive_messages(client, stdscr):
+    """Recibe y muestra mensajes en la UI de curses."""
     while True:
         try:
             message = client.recv(1024).decode('utf-8')
             if message:
-                print(f"\n📩 Mensaje recibido: {message}")  # DEBUG
+                messages.append(message)
+                stdscr.clear()
+                for i, msg in enumerate(messages[-15:]):  # Mostrar los últimos 15 mensajes
+                    stdscr.addstr(i, 0, msg)
+                stdscr.refresh()
             else:
-                print("⚠️ Servidor cerró la conexión")
                 break
         except:
-            print("❌ Error recibiendo mensaje")
+            break
+
+def chat_ui(stdscr, client):
+    """Interfaz de usuario con curses."""
+    curses.curs_set(1)  # Mostrar cursor en la entrada
+    stdscr.clear()
+    stdscr.refresh()
+
+    height, width = stdscr.getmaxyx()
+    input_win = curses.newwin(1, width - 2, height - 2, 1)  # Ventana de entrada
+    input_win.addstr(0, 0, "Escribe aquí: ")
+    input_win.refresh()
+
+    threading.Thread(target=receive_messages, args=(client, stdscr), daemon=True).start()
+
+    while True:
+        input_win.clear()
+        input_win.addstr(0, 0, "Escribe aquí: ")
+        input_win.refresh()
+        curses.echo()
+        message = input_win.getstr(0, 14).decode('utf-8')  # Leer mensaje del usuario
+
+        if message.lower() == "/exit":
             client.close()
             break
 
+        client.send(message.encode('utf-8'))
+
 def start_client():
-    """Inicia el cliente con autenticación y registro."""
+    """Inicia el cliente con autenticación y la UI."""
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect((HOST, PORT))
 
@@ -50,6 +81,7 @@ def start_client():
             client.close()
             return
 
+    # Autenticación antes de iniciar curses
     username = input("Usuario: ")
     password = input("Contraseña: ")
 
@@ -57,18 +89,14 @@ def start_client():
     client.send(password.encode('utf-8'))
 
     response = client.recv(1024).decode('utf-8')
+
     if response == "SUCCESS":
-        print("✅ Autenticado. Puedes empezar a chatear.")
-        threading.Thread(target=receive_messages, args=(client,)).start()
+        print("✅ Autenticado. Iniciando chat...")
+        input("Presiona ENTER para entrar en el chat...")  # Esto ayuda a evitar que curses limpie la terminal antes de ver el resultado
+        curses.wrapper(chat_ui, client=client)  # ✅ Iniciar la UI de chat solo después de autenticarse
     else:
         print("❌ Error en la autenticación.")
         client.close()
-        return
-
-    while True:
-        message = input("Tú: ")
-        print(f"📝 Enviando mensaje: {message}")  # DEBUG
-        client.send(message.encode('utf-8'))
 
 if __name__ == "__main__":
     start_client()
