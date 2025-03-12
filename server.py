@@ -1,8 +1,16 @@
 import socket
 import threading
 import os
+import logging
 from dotenv import load_dotenv
 from auth import authenticate_user, register_user
+
+# Configurar logging
+logging.basicConfig(
+    filename="server.log", 
+    level=logging.INFO, 
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 # Cargar variables de entorno
 load_dotenv()
@@ -14,14 +22,14 @@ clients = {}
 
 def broadcast(message, sender):
     """Envía un mensaje a todos los clientes EXCEPTO al remitente."""
-    print(f"🔹 Enviando mensaje: {message}")  # DEBUG
+    logging.info(f"Enviando mensaje: {message}")
     for client in clients.values():
-        if client != sender:  # 🔹 Evitamos enviar el mensaje al remitente
+        if client != sender:
             try:
                 client.send(message.encode('utf-8'))
-                print("✅ Mensaje enviado a un cliente")  # DEBUG
+                logging.info(f"Mensaje enviado a {client}")
             except:
-                print("❌ Error enviando mensaje")
+                logging.error("Error enviando mensaje", exc_info=True)
                 pass
 
 def handle_client(client, username):
@@ -31,15 +39,15 @@ def handle_client(client, username):
             message = client.recv(1024).decode('utf-8')
             if not message:
                 break
-            print(f"📨 Mensaje recibido de {username}: {message}")  # DEBUG
-            broadcast(f"{username}: {message}", client)  # 🔹 Ahora excluye al remitente
+            logging.info(f"Mensaje recibido de {username}: {message}")
+            broadcast(f"{username}: {message}", client)
         except:
-            print(f"⚠️ Cliente {username} se desconectó inesperadamente.")
+            logging.error(f"Error con el cliente {username}", exc_info=True)
             break
 
     del clients[username]
     client.close()
-    print(f"❌ {username} ha salido del chat.")
+    logging.info(f"{username} ha salido del chat.")
 
 def start_server():
     """Inicia el servidor y espera conexiones"""
@@ -47,22 +55,24 @@ def start_server():
     server.bind((HOST, PORT))
     server.listen()
 
-    print(f"📡 Servidor escuchando en {HOST}:{PORT}...")
+    logging.info(f"Servidor escuchando en {HOST}:{PORT}")
 
     while True:
         client, address = server.accept()
-        print(f"✅ Cliente conectado desde {address}")
+        logging.info(f"Cliente conectado desde {address}")
 
         choice = client.recv(1024).decode('utf-8')
 
-        if choice == "2":  # Registro de usuario
+        if choice == "2":
             username = client.recv(1024).decode('utf-8')
             password = client.recv(1024).decode('utf-8')
             
             if register_user(username, password):
                 client.send("REG_SUCCESS".encode('utf-8'))
+                logging.info(f"Usuario {username} registrado exitosamente.")
             else:
                 client.send("REG_FAIL".encode('utf-8'))
+                logging.warning(f"Intento de registro fallido para {username}")
                 client.close()
                 continue
 
@@ -72,11 +82,12 @@ def start_server():
         if authenticate_user(username, password):
             client.send("SUCCESS".encode('utf-8'))
             clients[username] = client
-            print(f"👥 Clientes conectados: {list(clients.keys())}")  # DEBUG
+            logging.info(f"Usuario {username} autenticado y conectado.")
             thread = threading.Thread(target=handle_client, args=(client, username))
             thread.start()
         else:
             client.send("FAIL".encode('utf-8'))
+            logging.warning(f"Intento de inicio de sesión fallido para {username}")
             client.close()
 
 if __name__ == "__main__":

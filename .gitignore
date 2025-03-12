@@ -2,3 +2,5 @@
 users.json
 __pycache__/
 .vscode/
+client.log
+server.log
