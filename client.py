@@ -19,11 +19,13 @@ def receive_messages(client, stdscr):
         try:
             message = client.recv(1024).decode('utf-8')
             if message:
-                messages.append(message)
-                stdscr.clear()
-                for i, msg in enumerate(messages[-15:]):  # Mostrar los últimos 15 mensajes
-                    stdscr.addstr(i, 0, msg)
-                stdscr.refresh()
+                # 🔹 Evitar que el usuario vea su propio mensaje recibido del servidor
+                if not message.startswith("Tú:"):  
+                    messages.append(message)
+                    stdscr.clear()
+                    for i, msg in enumerate(messages[-15:]):  # Mostrar últimos 15 mensajes
+                        stdscr.addstr(i, 0, msg)
+                    stdscr.refresh()
             else:
                 break
         except:
@@ -53,6 +55,13 @@ def chat_ui(stdscr, client):
             client.close()
             break
 
+        # 🔹 Guardar mensaje enviado en la lista de mensajes para mostrarlo en la UI
+        messages.append(f"Tú: {message}")
+        stdscr.clear()
+        for i, msg in enumerate(messages[-15:]):  # Mostrar últimos 15 mensajes
+            stdscr.addstr(i, 0, msg)
+        stdscr.refresh()
+
         client.send(message.encode('utf-8'))
 
 def start_client():
@@ -81,7 +90,6 @@ def start_client():
             client.close()
             return
 
-    # Autenticación antes de iniciar curses
     username = input("Usuario: ")
     password = input("Contraseña: ")
 
@@ -92,7 +100,7 @@ def start_client():
 
     if response == "SUCCESS":
         print("✅ Autenticado. Iniciando chat...")
-        input("Presiona ENTER para entrar en el chat...")  # Esto ayuda a evitar que curses limpie la terminal antes de ver el resultado
+        input("Presiona ENTER para entrar en el chat...")  # Evita que curses limpie la terminal antes de ver el resultado
         curses.wrapper(chat_ui, client=client)  # ✅ Iniciar la UI de chat solo después de autenticarse
     else:
         print("❌ Error en la autenticación.")

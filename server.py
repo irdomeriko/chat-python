@@ -13,15 +13,15 @@ PORT = int(os.getenv('PORT', 12345))
 clients = {}
 
 def broadcast(message, sender):
-    """Envía un mensaje a todos los clientes excepto el remitente."""
+    """Envía un mensaje a todos los clientes EXCEPTO al remitente."""
     print(f"🔹 Enviando mensaje: {message}")  # DEBUG
     for client in clients.values():
-        if client != sender:
+        if client != sender:  # 🔹 Evitamos enviar el mensaje al remitente
             try:
                 client.send(message.encode('utf-8'))
                 print("✅ Mensaje enviado a un cliente")  # DEBUG
             except:
-                print("❌ Error enviando mensaje")  # DEBUG
+                print("❌ Error enviando mensaje")
                 pass
 
 def handle_client(client, username):
@@ -32,7 +32,7 @@ def handle_client(client, username):
             if not message:
                 break
             print(f"📨 Mensaje recibido de {username}: {message}")  # DEBUG
-            broadcast(f"{username}: {message}", client)
+            broadcast(f"{username}: {message}", client)  # 🔹 Ahora excluye al remitente
         except:
             print(f"⚠️ Cliente {username} se desconectó inesperadamente.")
             break
