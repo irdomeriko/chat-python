@@ -5,9 +5,13 @@ import logging
 from dotenv import load_dotenv
 from auth import authenticate_user, register_user
 
-# Configurar logging
+# Crear carpeta de logs si no existe
+if not os.path.exists("logs"):
+    os.makedirs("logs")
+
+# Configurar logging para el servidor
 logging.basicConfig(
-    filename="server.log", 
+    filename="logs/server.log", 
     level=logging.INFO, 
     format="%(asctime)s - %(levelname)s - %(message)s"
 )

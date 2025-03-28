@@ -5,9 +5,13 @@ import curses
 import logging
 from dotenv import load_dotenv
 
-# Configurar logging
+# Crear carpeta de logs si no existe
+if not os.path.exists("logs"):
+    os.makedirs("logs")
+
+# Configurar logging para el cliente
 logging.basicConfig(
-    filename="client.log", 
+    filename="logs/client.log", 
     level=logging.INFO, 
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
