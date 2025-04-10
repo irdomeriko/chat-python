@@ -11,5 +11,8 @@ if respuesta == 1:
     os.system("python3 server.py")
 elif respuesta == 2:
     os.system("python3 client.py")
-elif respuesta == 3:
+elif respuesta ==3:
+    exit()
+else:
+    print("Opción no válida")
     exit()
